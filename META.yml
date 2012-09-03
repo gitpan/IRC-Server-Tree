@@ -16,7 +16,7 @@ name: IRC-Server-Tree
 provides:
   IRC::Server::Tree:
     file: lib/IRC/Server/Tree.pm
-    version: 0.01
+    version: 0.02
   IRC::Server::Tree::Network:
     file: lib/IRC/Server/Tree/Network.pm
     version: 0
@@ -28,4 +28,4 @@ requires:
   strictures: 1
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.01
+version: 0.02

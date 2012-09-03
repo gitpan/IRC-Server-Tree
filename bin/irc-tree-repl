@@ -72,7 +72,8 @@ print(
   "Other than that, it accepts any Perl expression.\n"
 );
 
-prompt() while 1
+prompt() while 1;
+
 
 =pod
 

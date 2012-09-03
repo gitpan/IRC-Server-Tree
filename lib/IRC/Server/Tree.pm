@@ -1,5 +1,5 @@
 package IRC::Server::Tree;
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 ## Array-type object representing a network map.
 
