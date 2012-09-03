@@ -1,0 +1,102 @@
+#!/usr/bin/env perl
+
+use strictures 1;
+use IRC::Server::Tree;
+use IRC::Server::Tree::Network;
+
+use Data::Dumper;
+use Term::ReadLine;
+
+use Eval::WithLexicals;
+
+use Getopt::Long;
+
+my @plugins;
+GetOptions(
+  'plugin=s' => \@plugins
+);
+
+{
+  package
+    Data::Dumper;
+
+    no strict 'vars';
+    $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
+    $Quotekeys = 0;
+}
+
+{
+  package
+    WithTrees;
+
+  sub create_tree {
+    IRC::Server::Tree->new(@_)
+  }
+
+  sub create_net {
+    IRC::Server::Tree::Network->new(@_)
+  }
+}
+
+my $eval;
+if (@plugins) {
+  $eval = Eval::WithLexicals->with_plugins(@plugins)->new(
+    in_package => 'WithTrees',
+  )
+} else {
+  $eval = Eval::WithLexicals->new(
+    in_package => 'WithTrees',
+  )
+}
+
+my $rl = Term::ReadLine->new('cobalt2-dbterm');
+my $fh = $rl->OUT || \*STDOUT;
+
+sub prompt {
+  my $line = $rl->readline('> ');
+  exit unless defined $line;
+
+  my @ret;
+  eval {
+    local $SIG{INT} = sub { die "SIGINT" };
+    @ret = $eval->eval($line);
+    1
+  } or @ret = ( 'error', $@ );
+  print Dumper @ret
+}
+
+print(
+  "This is a REPL instance (Eval::WithLexicals)\n",
+  "It has 'create_tree' and 'create_net' funcs for spawning a ",
+  "Tree or Network.\n",
+  "Other than that, it accepts any Perl expression.\n"
+);
+
+prompt() while 1
+
+=pod
+
+=head1 NAME
+
+irc-tree-repl - A Tree-enabled Eval::WithLexicals instance
+
+=head1 SYNOPSIS
+
+  $ irc-tree-repl
+  > my $tree = create_tree();
+  > my $net  = create_net();
+
+  --> Speak perl as normal
+
+=head1 DESCRIPTION
+
+An L<Eval::WithLexicals> REPL that installs a couple simple methods 
+for creating an L<IRC::Server::Tree> or L<IRC::Server::Tree::Network>.
+
+See the documentation for those modules for usage details.
+
+=head1 AUTHOR
+
+Jon Portnoy <avenj@cobaltirc.org>
+
+=cut

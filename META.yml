@@ -1,0 +1,31 @@
+---
+abstract: 'Represent and manipulate an IRC network tree'
+author:
+  - 'Jon Portnoy <avenj@cobaltirc.org>'
+build_requires:
+  Test::More: 0
+configure_requires:
+  Module::Build: 0.40
+dynamic_config: 1
+generated_by: 'Module::Build version 0.4001, CPAN::Meta::Converter version 2.120921'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: IRC-Server-Tree
+provides:
+  IRC::Server::Tree:
+    file: lib/IRC/Server/Tree.pm
+    version: 0.01
+  IRC::Server::Tree::Network:
+    file: lib/IRC/Server/Tree/Network.pm
+    version: 0
+requires:
+  Carp: 0
+  Scalar::Util: 0
+  Storable: 0
+  perl: v5.10.1
+  strictures: 1
+resources:
+  license: http://dev.perl.org/licenses/
+version: 0.01
