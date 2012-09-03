@@ -13,18 +13,37 @@ use IRC::Server::Tree;
 sub new {
   my $class = shift;
 
-  my $tree = do {
-    return $_[0]
-      if blessed $_[0] and $_[0]->isa('IRC::Server::Tree');
+  my $memoize;
+  my $tree = sub {
 
-    return IRC::Server::Tree->new($_[0])
-      if ref $_[0] eq 'ARRAY';
+    if (@_ == 1) {
+      my $item = $_[0];
 
-    IRC::Server::Tree->new
+      return $item
+        if blessed($item) and $item->isa('IRC::Server::Tree');
+
+      return IRC::Server::Tree->new($item)
+        if ref $item eq 'ARRAY';
+    } elsif (@_ > 1) {
+      ## Given named opts, we hope.
+      ##  memoize => Bool
+      ##  tree    => IRC::Server::Tree
+      my %opts = @_;
+      $opts{lc $_} = delete $opts{$_} for keys %opts;
+
+      $memoize = $opts{memoize} || 1;
+
+      return IRC::Server::Tree->new(
+        $opts{tree} ? delete $opts{tree} : ()
+      )
+    }
+
+    return IRC::Server::Tree->new
   };
 
   my $self = {
-    tree => $tree,
+    tree    => $tree->(@_),
+    memoize => $memoize,
   };
 
   bless $self, $class;
@@ -65,6 +84,8 @@ sub have_peer {
 sub _have_route_for_peer {
   my ($self, $peer) = @_;
 
+  return unless $self->{memoize};
+
   if (ref $self->{seen}->{$peer} eq 'ARRAY') {
     return $self->{seen}->{$peer}
   }
@@ -83,7 +104,8 @@ sub add_peer_to_self {
     return
   }
 
-  $self->tree->add_node_to_top($peer, $arrayref);
+  return unless
+    $self->tree->add_node_to_top($peer, $arrayref);
   $self->{seen}->{$peer} = 1;
   $self->reset_tree if $arrayref;
   1
@@ -103,7 +125,8 @@ sub add_peer_to_name {
     return
   }
 
-  $self->tree->add_node_to_name($parent_name, $new_name, $arrayref);
+  return unless
+    $self->tree->add_node_to_name($parent_name, $new_name, $arrayref);
   $self->{seen}->{$new_name} = 1;
   $self->reset_tree if $arrayref;
   1
@@ -140,16 +163,22 @@ sub trace {
   my ($self, $peer) = @_;
 
   if (my $routed = $self->_have_route_for_peer($peer) ) {
-    return $routed
+    return $self->tree->path_by_indexes( $routed )
   }
 
-  my $traced = $self->tree->trace( $peer );
+  ## FIXME maybe needs a switch via the memoize new() opt.
+  ## If we memoize the indexes, we have to walk that path twice.
+  ##  (a search to get indexes, a walk to get names)
+  ## If we memoize the route, we spend more memory on hop names.
+  my $index_route = $self->tree->trace_indexes( $peer );
+  return unless ref $index_route eq 'ARRAY' and @$index_route;
 
-  return unless ref $traced eq 'ARRAY';
+  my $named_hops  = $self->tree->path_by_indexes( $index_route );
+  return unless ref $named_hops eq 'ARRAY' and @$named_hops;
 
-  $self->{seen}->{$peer} = $traced;
+  $self->{seen}->{$peer} = $index_route if $self->{memoize};
 
-  $traced
+  $named_hops
 }
 
 sub tree {
@@ -192,11 +221,29 @@ and uniqueness-checking.
 =head2 new
 
   my $net = IRC::Server::Tree::Network->new;
+
+  ## With named opts:
+  my $net = IRC::Server::Tree::Network->new(
+    tree    => $my_tree,
+
+    ## Turn off route preservation:
+    memoize => 0,
+  );
+
+  ## With an existing Tree and no other opts:
   my $net = IRC::Server::Tree::Network->new(
     IRC::Server::Tree->new( $previous_tree )
   );
 
 The constructor initializes a fresh Network.
+
+=head3 memoize
+
+Setting 'memoize' to a false value at construction time will disable 
+route preservation, saving some memory at the expense of more frequent 
+tree searches.
+
+=head3 tree
 
 If an existing Tree is passed in, a list of unique node names in the Tree 
 is compiled and validated.

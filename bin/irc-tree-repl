@@ -5,9 +5,22 @@ use IRC::Server::Tree;
 use IRC::Server::Tree::Network;
 
 use Data::Dumper;
-use Term::ReadLine;
 
-use Eval::WithLexicals;
+{
+  local $@;
+  unless (eval { require Term::ReadLine;1 }) {
+    die "Could not load Term::ReadLine - try: cpan Term::ReadLine\n";
+  }
+
+  $@ = undef;
+
+  unless (eval { require Eval::WithLexicals;1 }) {
+    die(
+      "Could not load Eval::WithLexicals - ",
+      "try: cpan Eval::WithLexicals\n"
+    );
+  }
+}
 
 use Getopt::Long;
 

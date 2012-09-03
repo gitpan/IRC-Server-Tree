@@ -82,6 +82,8 @@ DESCRIPTION
 
       my $tree = IRC::Server::Tree->new( $old_tree );
 
+    (Note that this will clone the old Tree object.)
+
     Optionally create a tree from an ARRAY, if you really know what you're
     doing:
 
@@ -173,6 +175,15 @@ DESCRIPTION
     node.
 
     Takes either the name of a node in the tree or a reference to a node.
+
+  path_by_indexes
+      my $names = $tree->path_by_indexes( $index_route );
+      my $names = $tree->path_by_indexes( $index_route, $parent_ref );
+
+    Given an array of index hops as retrieved by "trace_indexes", retrieve
+    the name for each hop.
+
+    This is mostly used internally.
 
   print_map
       $tree->print_map;

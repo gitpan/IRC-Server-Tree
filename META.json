@@ -25,8 +25,13 @@
          }
       },
       "runtime" : {
+         "recommends" : {
+            "Eval::WithLexicals" : "0",
+            "Term::ReadLine" : "0"
+         },
          "requires" : {
             "Carp" : "0",
+            "Data::Dumper" : "0",
             "Scalar::Util" : "0",
             "Storable" : "0",
             "perl" : "v5.10.1",
@@ -37,7 +42,7 @@
    "provides" : {
       "IRC::Server::Tree" : {
          "file" : "lib/IRC/Server/Tree.pm",
-         "version" : "0.02"
+         "version" : "0.03"
       },
       "IRC::Server::Tree::Network" : {
          "file" : "lib/IRC/Server/Tree/Network.pm",
@@ -50,5 +55,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.02"
+   "version" : "0.03"
 }

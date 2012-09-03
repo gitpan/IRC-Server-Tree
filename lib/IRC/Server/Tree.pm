@@ -1,5 +1,5 @@
 package IRC::Server::Tree;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 ## Array-type object representing a network map.
 
@@ -202,9 +202,22 @@ sub trace {
     $self->trace_indexes($server_name, $parent_ref)
     or return;
 
-  my ($cur_ref, @names) = $parent_ref;
-  while (my $idx = shift @$index_route) {
-    push(@names, $cur_ref->[ $idx - 1 ]);
+  my @names = @{
+    $self->path_by_indexes($index_route, $parent_ref)
+  };
+
+  \@names
+}
+
+sub path_by_indexes {
+  my ($self, $index_array, $parent_ref) = @_;
+  ## Walk a trace_indexes array and retrieve names.
+  ## Used by ->trace()
+
+  my @names;
+  my $cur_ref = $parent_ref || $self;
+  while (my $idx = shift @$index_array) {
+    push @names, $cur_ref->[ $idx - 1 ];
     $cur_ref = $cur_ref->[$idx];
   }
 
@@ -394,6 +407,8 @@ L</child_node_for> and L</del_node_by_name>):
 
   my $tree = IRC::Server::Tree->new( $old_tree );
 
+(Note that this will clone the old Tree object.)
+
 Optionally create a tree from an ARRAY, if you really know what 
 you're doing:
 
@@ -493,6 +508,16 @@ Return an arrayref of all names in the tree beneath the specified parent
 node.
 
 Takes either the name of a node in the tree or a reference to a node.
+
+=head2 path_by_indexes
+
+  my $names = $tree->path_by_indexes( $index_route );
+  my $names = $tree->path_by_indexes( $index_route, $parent_ref );
+
+Given an array of index hops as retrieved by L</trace_indexes>, retrieve 
+the name for each hop.
+
+This is mostly used internally.
 
 =head2 print_map
 

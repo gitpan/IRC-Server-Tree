@@ -19,10 +19,16 @@ my $build = Module::Build->new(
   requires => {
     'perl'         => '5.10.1',
     'Carp'         => 0,
+    'Data::Dumper' => 0,
     'Storable'     => 0,
     'Scalar::Util' => 0,
 
     'strictures'   => 1,
+  },
+
+  recommends => {
+    'Eval::WithLexicals' => 0,
+    'Term::ReadLine'     => 0,
   },
 );
 

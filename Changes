@@ -1,5 +1,20 @@
 # Changes for IRC::Server::Tree
 
+* 0.03 (03 Sep 2012)
+
+  Tree; 
+    Add method path_by_indexes() for resolving names given a 
+    trace_indexes hop route.
+
+  Tree::Network;
+    Trade back some memory for some CPU time in preserving routes;
+    cache only their index-based route rather than hop names, walk 
+    the route to fetch names via Tree->path_by_indexes()
+
+    'memoize => 0' in constructor will turn off route preservation.
+
+    Fix slightly malfunctioning constructor.
+
 * 0.02 (02 Sep 2012)
 
   Fix a syntax error in bin/irc-tree-repl
