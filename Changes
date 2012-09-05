@@ -1,5 +1,14 @@
 # Changes for IRC::Server::Tree
 
+* 0.04 (04 Sep 2012)
+
+  Tree;
+    Fix path_by_indexes to not screw with the arrayref originally
+    passed in; this was breaking Network if memoize => 1
+
+  Tree::Network;
+    Fix memoize/route preservation.
+
 * 0.03 (03 Sep 2012)
 
   Tree; 

@@ -1,5 +1,5 @@
 package IRC::Server::Tree;
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 ## Array-type object representing a network map.
 
@@ -170,8 +170,10 @@ sub names_beneath {
   ## all the nodes in the tree under us.
 
   my $ref;
-  if (ref $ref_or_name eq 'ARRAY') {
-    $ref = $ref_or_name
+  if      (!$ref_or_name) {
+    $ref = $self
+  } elsif (ref $ref_or_name) {
+    $ref = $ref_or_name || $self
   } else {
     $ref = $self->child_node_for($ref_or_name)
   }
@@ -202,11 +204,7 @@ sub trace {
     $self->trace_indexes($server_name, $parent_ref)
     or return;
 
-  my @names = @{
-    $self->path_by_indexes($index_route, $parent_ref)
-  };
-
-  \@names
+  $self->path_by_indexes($index_route, $parent_ref)
 }
 
 sub path_by_indexes {
@@ -214,9 +212,11 @@ sub path_by_indexes {
   ## Walk a trace_indexes array and retrieve names.
   ## Used by ->trace()
 
+  my @indexes = @$index_array;
+
   my @names;
   my $cur_ref = $parent_ref || $self;
-  while (my $idx = shift @$index_array) {
+  while (my $idx = shift @indexes) {
     push @names, $cur_ref->[ $idx - 1 ];
     $cur_ref = $cur_ref->[$idx];
   }
@@ -227,6 +227,21 @@ sub path_by_indexes {
 sub trace_indexes {
   my ($self, $server_name, $parent_ref) = @_;
 
+  ## An example of breadth-first search.
+  ##
+  ## We explore each path in the current node, and as we find new paths,
+  ## we queue them to be explored after the current iteration.
+  ## (This is in contrast to depth-first techniques, where you recursively
+  ## explore each deeper reference as you hit it, with the path-so-far
+  ## included in the call, until you have the path desired.)
+  ##
+  ## This is useful for cases like an IRC server tree, where there is
+  ## an essentially arbitrary structure to the tree; any node may have
+  ## any arbitrary number of child nodes (ad infinitum) and we have no
+  ## actual hints as to the possible path.
+  ##
+  ## (Hmm. Considering running networked maze-solver races...)
+  ##
   ## Defaults to operating on $self
   ## Return indexes into arrays describing the path
   ## Return value is the full list of indexes to get to the array
@@ -288,7 +303,7 @@ sub print_map {
       $name = "` $name";
     }
 
-    print( (' ' x $indent) . "$name\n" );
+    print {*STDOUT} ( (' ' x $indent) . "$name\n" );
 
     while (my ($next_name, $next_ref) = splice @nodes, 0, 2) {
       $indent += 3;
@@ -304,7 +319,7 @@ sub print_map {
     $indent = 1;
   }
 
-  return
+  return 1
 }
 
 1;
@@ -341,11 +356,14 @@ See the DESCRIPTION for a complete method list.
 This piece was split out of a pending project because it may prove 
 otherwise useful. See L<IRC::Server::Tree::Network> for higher-level 
 (and simpler) methods pertaining to manipulation of an IRC network 
-specifically; it also provides a memory-for-speed tradeoff via 
-memoization of traced paths.
+specifically; a Network instance also provides a memory-for-speed 
+tradeoff via memoization of traced paths.
 
-IRC servers are linked to form a network; an IRC network is defined 
-as a 'spanning tree' per RFC1459.
+IRC servers are linked to form a network.
+An IRC network is defined as a 'spanning tree' per RFC1459; this module 
+is an array-type object representing such a tree, with convenient path 
+resolution methods for determining route "hops" and extending or shrinking 
+the tree.
 
 An IRC network tree is essentially unordered; any node can have any 
 number of child nodes, with the only rules being that:
@@ -365,17 +383,15 @@ No two nodes can share the same name.
 
 Currently, this module doesn't enforce the listed rules for performance 
 reasons, but things will break if you add non-uniquely-named nodes. Be 
-warned. (L<IRC::Server::Tree::Network> does more to validate the tree, 
-for what it's worth.)
+warned. (L<IRC::Server::Tree::Network> does much more to validate the 
+tree.)
 
-The object instance is a simple ARRAY and a new Tree can be created from 
-an existing Tree:
+A new Tree can be created from an existing Tree:
 
   my $new_tree = IRC::Server::Tree->new( $old_tree );
 
-Each individual node is also an array.
-
-The general structure of the tree is a simple array-of-array:
+In principle, the general structure of the tree is your average deep 
+array-of-arrays:
 
   $self => [
     hubA => [
@@ -517,7 +533,7 @@ Takes either the name of a node in the tree or a reference to a node.
 Given an array of index hops as retrieved by L</trace_indexes>, retrieve 
 the name for each hop.
 
-This is mostly used internally.
+This is mostly used internally by L</trace>.
 
 =head2 print_map
 
@@ -544,7 +560,7 @@ The last hop returned is the target's name.
 Primarily intended for internal use. This is the breadth-first search 
 that other methods use to find a node. There is nothing very useful you 
 can do with this externally except count hops; it is documented here to 
-show how this tree works.
+show how path resolution works.
 
 Returns an arrayref consisting of the index of every hop taken to get to 
 the node reference belonging to the specified node name starting from 

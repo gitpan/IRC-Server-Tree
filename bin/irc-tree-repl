@@ -49,7 +49,52 @@ GetOptions(
   sub create_net {
     IRC::Server::Tree::Network->new(@_)
   }
-}
+
+  sub create_random_net {
+    my $ref = [
+      hubA => [],
+      hubB => [],
+    ];
+
+    my $net = IRC::Server::Tree::Network->new($ref);
+
+    my @servers;
+
+    for my $i (1 .. 2) {
+      for my $trailing ('A' .. 'Z', 1 .. 9) {
+        push(@servers, 'server'.($trailing x $i));
+      }
+    }
+
+    require List::Util;
+    @servers = List::Util::shuffle(@servers);
+
+    my $add_to_rand; $add_to_rand = sub {
+      my ($this_ref, $name) = @_;
+      my $rand_idx = rand @$this_ref;
+      my $top_lev = ref $this_ref->[$rand_idx] eq 'ARRAY' ?
+        $this_ref->[$rand_idx]
+        : $net->tree->child_node_for($this_ref->[$rand_idx]);
+      die "expected ARRAY but got $top_lev"
+        unless ref $top_lev eq 'ARRAY';
+      if (@$top_lev) {
+        ## Maybe go another level.
+        (rand(3) < 2) ?
+          return $add_to_rand->($top_lev, $name)
+          : push(@$top_lev, $name => []);
+      } else {
+        push(@$top_lev, $name => []);
+      }
+    };
+
+    while (my $server = shift @servers) {
+      $add_to_rand->($net->tree, $server);
+    }
+
+    $net
+  }
+
+}  ## WithTrees
 
 my $eval;
 if (@plugins) {
@@ -100,6 +145,8 @@ irc-tree-repl - A Tree-enabled Eval::WithLexicals instance
   > my $tree = create_tree();
   > my $net  = create_net();
 
+  > my $random_net = create_random_net();
+
   --> Speak perl as normal
 
 =head1 DESCRIPTION
@@ -108,6 +155,18 @@ An L<Eval::WithLexicals> REPL that installs a couple simple methods
 for creating an L<IRC::Server::Tree> or L<IRC::Server::Tree::Network>.
 
 See the documentation for those modules for usage details.
+
+=head2 create_tree
+
+Spawn an IRC::Server::Tree instance.
+
+=head2 create_net
+
+Spawn an IRC::Server::Tree::Network instance.
+
+=head2 create_random_net
+
+Create a randomized Network tree.
 
 =head1 AUTHOR
 

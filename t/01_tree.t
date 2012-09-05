@@ -1,4 +1,4 @@
-use Test::More tests => 26;
+use Test::More tests => 28;
 use strict; use warnings FATAL => 'all';
 
 BEGIN {
@@ -103,3 +103,11 @@ ok($hub_node = $t->child_node_for('newhub'),
 is_deeply($t->trace('lleafB', $hub_node), [ 'lleafB' ],
   'trace from newhub to lleafB looks ok'
 );
+
+{
+  local *STDOUT;
+  my $map;
+  open *STDOUT, '+<', \$map;
+  ok( $t->print_map, 'print_map returned true' );
+  ok( $map, 'print_map wrote stdout' );
+}
