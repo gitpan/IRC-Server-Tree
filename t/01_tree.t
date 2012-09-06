@@ -1,4 +1,4 @@
-use Test::More tests => 28;
+use Test::More tests => 32;
 use strict; use warnings FATAL => 'all';
 
 BEGIN {
@@ -102,6 +102,18 @@ ok($hub_node = $t->child_node_for('newhub'),
 
 is_deeply($t->trace('lleafB', $hub_node), [ 'lleafB' ],
   'trace from newhub to lleafB looks ok'
+);
+
+
+ok($deleted = $t->del_node_by_name('newhub'), 'del_node_by_name(hubB)' );
+my $new = new_ok('IRC::Server::Tree' => [ $deleted ] );
+## readding should break bless()
+ok($t->add_node_to_name('hubB', 'unblessed', $new),
+  'add_node_to_name for blessed Tree'
+);
+is_deeply($t->trace('lleafB'),
+  [ 'hubB', 'unblessed', 'lleafB' ],
+  'trace after adding blessed Tree'
 );
 
 {

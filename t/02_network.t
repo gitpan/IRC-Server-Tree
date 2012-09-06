@@ -1,4 +1,4 @@
-use Test::More tests => 26;
+use Test::More tests => 34;
 use strict; use warnings FATAL => 'all';
 
 BEGIN {
@@ -106,9 +106,92 @@ cmp_ok($net->hop_count('hubB'), '==', 1,
   ok(!$net->trace('lhubleafA'), 'route to hubleafA was cleared');
 }
 
-## tree fuckery and reset_tree
-## FIXME test exception thrown with invalid tree
-## FIXME test with cloned/partial trees
-## FIXME new() variation tests
-## FIXME test for memoize => 0
-## FIXME test split_peer retval behavior, see POD
+
+## invalid tree tests
+{ local $@;
+  require IRC::Server::Tree::Network;
+
+  my $bad_node = [
+          hubA => [
+            leafA => [],
+          ],
+          hubB => [
+            leafA => [],
+            leafB => [],
+          ],
+  ];
+
+  eval {
+    my $bad_net = IRC::Server::Tree::Network->new(
+      tree => $bad_node
+    );
+  };
+  if ($@ && $@ =~ /duplicate/) {
+    pass("tree with dupes failed validation in new()")
+  } else {
+    fail("should not have not allowed tree with dupes in new()");
+    diag("$@");
+  }
+
+  eval {
+    my $bad_net = IRC::Server::Tree::Network->new;
+    $bad_net->add_peer_to_self('myhub');
+    $bad_net->add_peer_to_name('myhub', 'newnode', $bad_node);
+  };
+  if ($@ && $@ =~ /duplicate/) {
+    pass("tree with dupes failed validation in add_")
+  } else {
+    fail("should not have allowed tree with dupes in add_");
+    diag("$@");
+  }
+}
+
+## split and readd peer_nodes
+## object-type new() w/ array-type Tree new()
+$net = new_ok( 'IRC::Server::Tree::Network' => [
+  IRC::Server::Tree->new(
+    [
+      hubA => [
+        serverA => [],
+        serverB => [],
+      ],
+      hubB => [
+        serverC => [
+          leafA => [],
+        ],
+        serverD => [],
+      ],
+    ],
+  )
+]);
+
+is_deeply($net->trace('leafA'),
+  [ 'hubB', 'serverC', 'leafA' ],
+  'trace to leafA looks ok'
+);
+
+{
+  my $split_nodes;
+  ok($split_nodes = $net->split_peer_nodes('hubB'),
+    'split_peer_nodes hubB'
+  );
+
+  is_deeply( $split_nodes,
+    [
+      serverC => [
+        leafA => [],
+      ],
+      serverD => [],
+    ],
+    'split nodes ref looks OK'
+  );
+
+  ok($net->add_peer_to_name('hubA', 'hubB', $split_nodes),
+    'readd split nodes'
+  );
+
+  is_deeply($net->trace('leafA'),
+    [ 'hubA', 'hubB', 'serverC', 'leafA' ],
+    'trace to leafA after rejoin looks OK'
+  );
+}

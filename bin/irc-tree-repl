@@ -79,7 +79,7 @@ GetOptions(
         unless ref $top_lev eq 'ARRAY';
       if (@$top_lev) {
         ## Maybe go another level.
-        (rand(3) < 2) ?
+        (rand(5) < 3) ?
           return $add_to_rand->($top_lev, $name)
           : push(@$top_lev, $name => []);
       } else {
@@ -127,7 +127,9 @@ print(
   "This is a REPL instance (Eval::WithLexicals)\n",
   "It has 'create_tree' and 'create_net' funcs for spawning a ",
   "Tree or Network.\n",
-  "Other than that, it accepts any Perl expression.\n"
+  "  my \$n = create_net;\n",
+  "The 'create_random_net' function builds a random Network.\n",
+  "Otherwise, it accepts any Perl expression.\n"
 );
 
 prompt() while 1;

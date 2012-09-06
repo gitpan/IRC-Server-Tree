@@ -1,5 +1,5 @@
 package IRC::Server::Tree;
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 ## Array-type object representing a network map.
 
@@ -47,6 +47,8 @@ sub new {
 
 sub add_node_to_parent_ref {
   my ($self, $parent_ref, $name, $arrayref) = @_;
+
+  $arrayref = [@$arrayref] if blessed $arrayref;
 
   push @$parent_ref, $name, ($arrayref||=[]);
 
@@ -266,7 +268,9 @@ sub trace_indexes {
 
     my @leaf_list = @$parent_ref;
     my $child_idx = 0;
+
     CHILD: while (my ($child_name, $child_ref) = splice @leaf_list, 0, 2) {
+
       unless ( $route{$child_name} ) {
         $route{$child_name} =
           [ @{ $route{$parent_name}||[] }, $child_idx+1 ];
@@ -356,8 +360,8 @@ See the DESCRIPTION for a complete method list.
 This piece was split out of a pending project because it may prove 
 otherwise useful. See L<IRC::Server::Tree::Network> for higher-level 
 (and simpler) methods pertaining to manipulation of an IRC network 
-specifically; a Network instance also provides a memory-for-speed 
-tradeoff via memoization of traced paths.
+specifically; a Network instance also provides an optional 
+memory-for-speed tradeoff via memoization of traced paths.
 
 IRC servers are linked to form a network.
 An IRC network is defined as a 'spanning tree' per RFC1459; this module 
@@ -383,8 +387,9 @@ No two nodes can share the same name.
 
 Currently, this module doesn't enforce the listed rules for performance 
 reasons, but things will break if you add non-uniquely-named nodes. Be 
-warned. (L<IRC::Server::Tree::Network> does much more to validate the 
-tree.)
+warned. In fact, this module doesn't sanity 
+check very much of anything; an L<IRC::Server::Tree::Network> does much 
+more to validate the tree and passed arguments.
 
 A new Tree can be created from an existing Tree:
 

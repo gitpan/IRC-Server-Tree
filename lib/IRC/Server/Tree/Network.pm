@@ -99,6 +99,14 @@ sub add_peer_to_self {
   confess "add_peer_to_self expects a peer name"
     unless defined $peer;
 
+  if ($arrayref) {
+    confess(
+      "third arg to add_peer_to_name should be an ARRAY or ",
+      "an IRC::Server::Tree"
+    ) unless ref $arrayref eq 'ARRAY'
+      or blessed $arrayref and $arrayref->isa('IRC::Server::Tree');
+  }
+
   if ( $self->have_peer($peer) ) {
     carp "Tried to add previously-seen node $peer";
     return
@@ -107,6 +115,7 @@ sub add_peer_to_self {
   return unless
     $self->tree->add_node_to_top($peer, $arrayref);
   $self->{seen}->{$peer} = 1;
+  ## reset_tree() if we might've added children
   $self->reset_tree if $arrayref;
   1
 }
@@ -119,6 +128,17 @@ sub add_peer_to_name {
   ## when adding.
   ## Probably should have an add in Tree that can take numerical
   ## routes to the parent's ref.
+
+  confess "add_peer_to_name expects a parent name and new node name"
+    unless defined $parent_name and defined $new_name;
+
+  if ($arrayref) {
+    confess(
+      "third arg to add_peer_to_name should be an ARRAY or ",
+      "an IRC::Server::Tree"
+    ) unless ref $arrayref eq 'ARRAY'
+      or blessed $arrayref and $arrayref->isa('IRC::Server::Tree');
+  }
 
   if ( $self->have_peer($new_name) ) {
     carp "Tried to add previously-seen node $new_name";
@@ -134,9 +154,12 @@ sub add_peer_to_name {
 
 sub hop_count {
   ## Returns a hop count as normally used in LINKS output and similar
-  my ($self, $peer_name) = @_;
+  my ($self, $peer) = @_;
 
-  my $path = $self->trace( $peer_name );
+  confess "hop_count expects a peer name"
+    unless defined $peer;
+
+  my $path = $self->trace( $peer );
   return unless $path;
 
   scalar(@$path)
@@ -145,6 +168,9 @@ sub hop_count {
 sub split_peer {
   ## Split a peer and return the names of all hops under it.
   my ($self, $peer) = @_;
+
+  confess "split_peer expects a peer name"
+    unless defined $peer;
 
   my $splitref = $self->tree->del_node_by_name( $peer ) || return;
 
@@ -159,8 +185,27 @@ sub split_peer {
   $names
 }
 
+sub split_peer_nodes {
+  my ($self, $peer) = @_;
+
+  confess "split_peer_nodes expects a peer name"
+    unless defined $peer;
+
+  my $splitref = $self->tree->del_node_by_name($peer) || return;
+  delete $self->{seen}->{$peer};
+
+  for my $name (@{ $self->tree->names_beneath($splitref) || [] }) {
+    delete $self->{seen}->{$name}
+  }
+
+  $splitref
+}
+
 sub trace {
   my ($self, $peer) = @_;
+
+  confess "trace expects a peer name"
+    unless defined $peer;
 
   if (my $routed = $self->_have_route_for_peer($peer) ) {
     return $self->tree->path_by_indexes( $routed )
@@ -326,6 +371,21 @@ Returns empty list if the peer was not found.
 
 Returns empty arrayref if the node was split but no nodes were underneath 
 the split node.
+
+=head2 split_peer_nodes
+
+  my $split_peer_nodes = $net->split_peer_nodes( $peer_name );
+
+Splits a node from the tree just like L</split_peer>, except returns the 
+array-of-arrays forming the tree underneath the split peer.
+
+This can be 
+fed back to Network add_peer methods such as L</add_peer_to_self> and 
+L</add_peer_to_name>:
+
+  my $split_nodes = $net->split_peer_nodes( 'hubA' );
+  $net->add_peer_to_self( 'NewHub' );
+  $net->add_peer_to_name( 'NewHub', $split_nodes );
 
 =head2 trace
 
